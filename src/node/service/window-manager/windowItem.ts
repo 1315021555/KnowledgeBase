@@ -1,0 +1,6 @@
+
+class WindowItem {
+  constructor(options) {
+    
+  }
+}
