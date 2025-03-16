@@ -1,5 +1,5 @@
 // electron 模块可以用来控制应用的生命周期和创建原生浏览窗口
-const { app, BrowserWindow } = require("electron");
+const { app, BrowserWindow, globalShortcut } = require("electron");
 const path = require("path");
 // 保持window对象的全局引用,避免JavaScript对象被垃圾回收时,窗口被自动关闭.
 let mainWindow;
@@ -18,12 +18,19 @@ const createWindow = () => {
     },
   });
 
+  // 隐藏菜单栏
+  mainWindow.setMenu(null);
+
   const isDev = process.env.NODE_ENV === "development";
   if (!isDev) {
     // 加载应用----react 打包
     mainWindow.loadFile(path.join(__dirname, "./index.html"));
   } else {
     // 加载应用----适用于 react 开发时项目
+    // 注册快捷键打开开发者工具
+    globalShortcut.register("CommandOrControl+Shift+I", () => {
+      mainWindow.webContents.openDevTools();
+    });
     mainWindow.loadURL("http://localhost:3000/");
   }
 
