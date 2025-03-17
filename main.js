@@ -8,8 +8,8 @@ const createWindow = () => {
   // 创建浏览窗口
   mainWindow = new BrowserWindow({
     title: "个人知识库123",
-    width: 800,
-    height: 600,
+    width: 1350,
+    height: 700,
     // frame: false,
     webPreferences: {
       nodeIntegration: true,
@@ -30,6 +30,11 @@ const createWindow = () => {
     // 注册快捷键打开开发者工具
     globalShortcut.register("CommandOrControl+Shift+I", () => {
       mainWindow.webContents.openDevTools();
+    });
+    // 注册重启应用的快捷键
+    globalShortcut.register("CommandOrControl+R", () => {
+      app.relaunch();
+      app.quit();
     });
     mainWindow.loadURL("http://localhost:3000/");
   }

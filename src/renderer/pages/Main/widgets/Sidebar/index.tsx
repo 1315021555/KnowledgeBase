@@ -24,7 +24,7 @@ const SidebarComponent = () => {
   const [activeNavItem, setActiveNavItem] = useState<number>(0);
   const navigate = useNavigate();
   const navItems = [
-    { label: "Home", icon: <FiHome />, path: "/home" },
+    { label: "Home", icon: <FiHome />, path: "/" },
     { label: "AI", icon: <FiActivity />, path: "/chat" },
     { label: "知识库", icon: <FiBook />, path: "/knowledge" }, // 假设的路径，根据实际情况修改
   ];
