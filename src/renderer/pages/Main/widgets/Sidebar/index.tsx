@@ -17,15 +17,17 @@ import {
   SidebarToggleButton,
 } from "@saas-ui/react";
 import { FiHome, FiActivity, FiBook } from "react-icons/fi";
+import { RiAiGenerate2 } from "react-icons/ri";
 import MyTree from "@/renderer/components/tree"; // 请确保路径正确
 import { useNavigate } from "react-router-dom";
+import DirTree from "../DirTree";
 
 const SidebarComponent = () => {
   const [activeNavItem, setActiveNavItem] = useState<number>(0);
   const navigate = useNavigate();
   const navItems = [
     { label: "Home", icon: <FiHome />, path: "/" },
-    { label: "AI", icon: <FiActivity />, path: "/chat" },
+    { label: "AI", icon: <RiAiGenerate2 />, path: "/chat" },
     { label: "知识库", icon: <FiBook />, path: "/knowledge" }, // 假设的路径，根据实际情况修改
   ];
 
@@ -73,7 +75,7 @@ const SidebarComponent = () => {
           </NavItem>
         ))}
         {/* 树形结构 */}
-        <MyTree></MyTree>
+        <DirTree></DirTree>
         {/* <NavItem icon={<FiSettings />}>Settings</NavItem> */}
       </SidebarSection>
     </Sidebar>
