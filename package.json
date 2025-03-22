@@ -41,6 +41,7 @@
     ]
   },
   "dependencies": {
+    "@ant-design/icons": "^6.0.0",
     "@ant-design/x": "^1.0.6",
     "@blocknote/core": "^0.25.2",
     "@blocknote/mantine": "^0.25.2",

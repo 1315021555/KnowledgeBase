@@ -1,12 +1,13 @@
 import "@blocknote/react/style.css";
 import "@blocknote/mantine/style.css";
 import {
+  getDirTree,
   getKnowledgeContentById,
   updateKnowledgeContentById,
 } from "@/service/api/knowledage";
 import { Box, Input } from "@chakra-ui/react";
-import { useEffect, useState } from "react";
-import { useSelector } from "react-redux";
+import { Fragment, useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import {
   useCreateBlockNote,
   BasicTextStyleButton,
@@ -22,6 +23,12 @@ import {
 import { BlockNoteView } from "@blocknote/mantine";
 import { ExpendButton } from "./components/ExpendButton";
 import { ModifyButton } from "./components/ModifyButton";
+import {
+  fetchAndUpdateTreeData,
+  setSelectedId,
+} from "@/renderer/redux/knowledgeSlice";
+import { findPath } from "./utils";
+import { Breadcrumb } from "antd";
 const Note = () => {
   const selectedKnowledgeId = useSelector(
     (state: any) => state.knowledge.selectedId
@@ -29,6 +36,8 @@ const Note = () => {
   const editor = useCreateBlockNote();
   const [content, setContent] = useState<string>("defaultContent");
   const [title, setTitle] = useState<string>("defaultTitle");
+  const treedata = useSelector((state: any) => state.knowledge.treeData);
+  const dispatch = useDispatch();
   useEffect(() => {
     // 初始化页面内容
     async function loadInitialHTML() {
@@ -37,7 +46,9 @@ const Note = () => {
     }
     loadInitialHTML();
   }, [content]);
+
   useEffect(() => {
+    // 切换页面内容
     if (!selectedKnowledgeId) {
       return;
     }
@@ -59,9 +70,8 @@ const Note = () => {
       console.log("change html", HTMLFromBlocks);
       updateKnowledgeContentById(`${selectedKnowledgeId}`, {
         content: HTMLFromBlocks,
-      }).then(() => {
-        console.log("更新内容成功", selectedKnowledgeId);
-      });
+      }).then(() => {});
+      console.log("更新内容成功", selectedKnowledgeId);
       // UpdatePageContent(curPageId, HTMLFromBlocks).then(() => {
       //   console.log("更新page内容", curPageId);
       // });
@@ -70,6 +80,30 @@ const Note = () => {
     }
   }
 
+  // 监听标题变化
+  async function tilteChangeHandler(e: React.ChangeEvent<HTMLInputElement>) {
+    try {
+      const title = e.target.value;
+      // if (!isLogin) return;
+      setTitle(title);
+      updateKnowledgeContentById(`${selectedKnowledgeId}`, {
+        title: title,
+      }).then(() => {
+        dispatch(fetchAndUpdateTreeData() as any);
+        console.log("更新标题成功", selectedKnowledgeId);
+        // 更新Tree
+      });
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  // 监听面包屑目录变化
+  const handleBreadcrumbClick = (pathPart: any) => {
+    console.log("点击面包屑目录", pathPart);
+    dispatch(setSelectedId(pathPart.id));
+  };
+
   return (
     <>
       <Box
@@ -77,15 +111,43 @@ const Note = () => {
         alignItems="center"
         justifyContent="space-between"
         p={4}
-        bg="gray.100"
+        bg="white"
         // 高度
         w={"100%"}
-        h={10}
+        h={20}
+        pos={"fixed"}
+        top={0}
+        zIndex={1000}
       >
-        字数：{content.length}
+        {/* 面包屑目录 */}
+        <Box
+          display="flex"
+          alignItems="center"
+          color="gray.500" // 设置面包屑文字颜色
+        >
+          {findPath(treedata, selectedKnowledgeId).map(
+            (pathPart: any, index) => (
+              <Fragment key={index}>
+                {index > 0 && "  /  "}
+                <button
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "gray.500",
+                    cursor: "pointer",
+                    padding: "5px",
+                  }}
+                  onClick={() => handleBreadcrumbClick(pathPart)}
+                >
+                  {pathPart.title}
+                </button>
+              </Fragment>
+            )
+          )}
+        </Box>
       </Box>
-      <Box mt={10}>
-        {/* 添加一个标题 */}
+      <Box mt={20}>
+        {/* 标题 */}
         <Box ml={50}>
           <Input
             variant="unstyled"
@@ -95,10 +157,10 @@ const Note = () => {
             _placeholder={{ opacity: 0.5, color: "gray.500" }}
             value={title}
             // Add onChange handler
-            onChange={(e) => setTitle(e.target.value)}
+            onChange={tilteChangeHandler}
           />
         </Box>
-        <Box mt={3}>
+        <Box mt={5}>
           <BlockNoteView
             editor={editor}
             formattingToolbar={false}

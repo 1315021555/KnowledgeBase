@@ -15,10 +15,10 @@ import {
   NavItem,
   PersonaAvatar,
   SidebarToggleButton,
+  NavGroup,
 } from "@saas-ui/react";
-import { FiHome, FiActivity, FiBook } from "react-icons/fi";
+import { FiHome, FiActivity, FiBook, FiSettings } from "react-icons/fi";
 import { RiAiGenerate2 } from "react-icons/ri";
-import MyTree from "@/renderer/components/tree"; // 请确保路径正确
 import { useNavigate } from "react-router-dom";
 import DirTree from "../DirTree";
 
@@ -28,7 +28,7 @@ const SidebarComponent = () => {
   const navItems = [
     { label: "Home", icon: <FiHome />, path: "/" },
     { label: "AI", icon: <RiAiGenerate2 />, path: "/chat" },
-    { label: "知识库", icon: <FiBook />, path: "/knowledge" }, // 假设的路径，根据实际情况修改
+    { label: "设置", icon: <FiSettings />, path: "/" }, // 假设的路径，根据实际情况修改
   ];
 
   const handleNavItemClick = (index: number, path: string) => {
@@ -74,8 +74,11 @@ const SidebarComponent = () => {
             {item.label}
           </NavItem>
         ))}
-        {/* 树形结构 */}
-        <DirTree></DirTree>
+
+        <NavGroup title="知识库" isCollapsible>
+          {/* 树形结构 */}
+          <DirTree></DirTree>
+        </NavGroup>
         {/* <NavItem icon={<FiSettings />}>Settings</NavItem> */}
       </SidebarSection>
     </Sidebar>
