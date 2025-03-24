@@ -65,7 +65,7 @@ const Note = () => {
       const data = await getKnowledgeContentById(`${selectedKnowledgeId}`);
       console.log("获取内容成功:", data);
       setTitle(data?.title || "");
-      const blocks = await editor.tryParseHTMLToBlocks(data.content);
+      const blocks = await editor.tryParseMarkdownToBlocks(data.content);
       editor.replaceBlocks(editor.document, blocks);
       // 设置同步状态为true
       dispatch(setCurKnowledgeSyncStatus(true));
@@ -78,7 +78,7 @@ const Note = () => {
   // 使用 useCallback 确保每次调用时使用的是同一个防抖函数实例
   const debouncedAsyncContentChange = useCallback(
     debounce(
-      (HTMLFromBlocks: string) => asyncContentChange(HTMLFromBlocks),
+      (MarkdownFromBlocks: string) => asyncContentChange(MarkdownFromBlocks),
       2000
     ),
     [selectedKnowledgeId] // 依赖项数组为空
@@ -114,27 +114,31 @@ const Note = () => {
 
       // TODO: 如何判断是页面切换，如果是页面切换就不用更新后端
       dispatch(setCurKnowledgeSyncStatus(false));
-      const HTMLFromBlocks = await editor.blocksToHTMLLossy();
-      if (HTMLFromBlocks === null) {
-        console.log("HTMLFromBlocks is null");
+      const MarkdownFromBlocks = await editor.blocksToMarkdownLossy();
+      if (MarkdownFromBlocks === null) {
+        console.log("MarkdownFromBlocks is null");
         return;
       }
-      // dispatch(setActivePageContent(HTMLFromBlocks));
-      console.log("change html", HTMLFromBlocks);
-      dispatch(setCurKnowledgeContent(HTMLFromBlocks));
+
+      console.log("change markdown", MarkdownFromBlocks);
+      dispatch(setCurKnowledgeContent(MarkdownFromBlocks));
       // 防抖更新后端
-      debouncedAsyncContentChange(HTMLFromBlocks);
+      debouncedAsyncContentChange(MarkdownFromBlocks);
     } catch (error) {
-      console.log("Error getting HTML from blocks:", error);
+      console.log("Error getting Markdown from blocks:", error);
     }
   }
 
-  function asyncContentChange(HTMLFromBlocks: string) {
+  function asyncContentChange(MarkdownFromBlocks: string) {
     updateKnowledgeContentById(`${selectedKnowledgeId}`, {
-      content: HTMLFromBlocks,
+      content: MarkdownFromBlocks,
     })
       .then(() => {
-        console.log("更新后台内容成功", selectedKnowledgeId, HTMLFromBlocks);
+        console.log(
+          "更新后台内容成功",
+          selectedKnowledgeId,
+          MarkdownFromBlocks
+        );
         dispatch(setCurKnowledgeSyncStatus(true));
         setProgress(100);
         clearProgressTimer();

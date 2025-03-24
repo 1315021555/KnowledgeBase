@@ -1,0 +1,14 @@
+/* 修改一级标题的字体大小 */
+h1.bn-inline-content {
+  font-size: 24px !important;
+}
+
+/* 修改二级标题的字体大小 */
+h2.bn-inline-content {
+  font-size: 20px !important;
+}
+
+/* 修改三级标题的字体大小 */
+h3.bn-inline-content {
+  font-size: 18px !important;
+}
