@@ -6,7 +6,7 @@ import {
   updateKnowledgeContentById,
 } from "@/service/api/knowledage";
 import { Box, Input } from "@chakra-ui/react";
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   useCreateBlockNote,
@@ -25,59 +25,125 @@ import { ExpendButton } from "./components/ExpendButton";
 import { ModifyButton } from "./components/ModifyButton";
 import {
   fetchAndUpdateTreeData,
-  setSelectedId,
+  setCurKnowledgeContent,
+  setCurKnowledgeSyncStatus,
 } from "@/renderer/redux/knowledgeSlice";
 import { findPath } from "./utils";
-import { Breadcrumb } from "antd";
+import { debounce } from "@/common/utils";
+import { useCallback } from "react";
+import { useSetKnowledgeId } from "@/renderer/hooks/useSetKnowledgeId";
+import { ConfigProvider, Flex, Progress } from "antd";
 const Note = () => {
   const selectedKnowledgeId = useSelector(
     (state: any) => state.knowledge.selectedId
   );
   const editor = useCreateBlockNote();
-  const [content, setContent] = useState<string>("defaultContent");
   const [title, setTitle] = useState<string>("defaultTitle");
+  const currentKnowledgeSyncStatus = useSelector(
+    (state: any) => state.knowledge.currentKnowledgeSyncStatus
+  );
+  const [progress, setProgress] = useState(0);
+  const timer = useRef<NodeJS.Timeout | null>(null);
   const treedata = useSelector((state: any) => state.knowledge.treeData);
   const dispatch = useDispatch();
+  const setKnowledgeId = useSetKnowledgeId();
+
+  // 组件卸载时清除定时器
   useEffect(() => {
-    // 初始化页面内容
-    async function loadInitialHTML() {
-      const blocks = await editor.tryParseHTMLToBlocks(content);
-      editor.replaceBlocks(editor.document, blocks);
-    }
-    loadInitialHTML();
-  }, [content]);
+    return () => {
+      clearProgressTimer();
+    };
+  }, []);
 
   useEffect(() => {
     // 切换页面内容
     if (!selectedKnowledgeId) {
       return;
     }
+
     const fetchContent = async () => {
       const data = await getKnowledgeContentById(`${selectedKnowledgeId}`);
       console.log("获取内容成功:", data);
-      setContent(data?.content || "");
       setTitle(data?.title || "");
+      const blocks = await editor.tryParseHTMLToBlocks(data.content);
+      editor.replaceBlocks(editor.document, blocks);
+      // 设置同步状态为true
+      dispatch(setCurKnowledgeSyncStatus(true));
+      // 设置进度为100
+      setProgress(100);
     };
     fetchContent();
   }, [selectedKnowledgeId]);
 
+  // 使用 useCallback 确保每次调用时使用的是同一个防抖函数实例
+  const debouncedAsyncContentChange = useCallback(
+    debounce(
+      (HTMLFromBlocks: string) => asyncContentChange(HTMLFromBlocks),
+      2000
+    ),
+    [selectedKnowledgeId] // 依赖项数组为空
+  );
+  // 清除定时器
+  const clearProgressTimer = () => {
+    if (timer.current) {
+      clearInterval(timer.current);
+      timer.current = null;
+    }
+  };
+
   // 监听内容变化
+  // 1. 页面切换 2. 编辑当前页面内容
   async function contentChangeHandler() {
     try {
-      // if (!isLogin) return;
+      setProgress(0);
+      // 清楚之前的定时器，要用函数调用的方式
+      clearProgressTimer();
+      // timer.current = setInterval(() => {
+      //   if (progress < 100) {
+      //     console.log("progress", progress);
+      //     setProgress((prevProgress) => prevProgress + 10);
+      //   } else {
+      //     clearProgressTimer();
+      //     setProgress(100);
+      //   }
+      // }, 200);
+      // 启动新定时器
+      timer.current = setInterval(() => {
+        setProgress((prev) => (prev < 90 ? prev + 10 : prev)); // 更新进度
+      }, 200);
+
+      // TODO: 如何判断是页面切换，如果是页面切换就不用更新后端
+      dispatch(setCurKnowledgeSyncStatus(false));
       const HTMLFromBlocks = await editor.blocksToHTMLLossy();
+      if (HTMLFromBlocks === null) {
+        console.log("HTMLFromBlocks is null");
+        return;
+      }
       // dispatch(setActivePageContent(HTMLFromBlocks));
       console.log("change html", HTMLFromBlocks);
-      updateKnowledgeContentById(`${selectedKnowledgeId}`, {
-        content: HTMLFromBlocks,
-      }).then(() => {});
-      console.log("更新内容成功", selectedKnowledgeId);
-      // UpdatePageContent(curPageId, HTMLFromBlocks).then(() => {
-      //   console.log("更新page内容", curPageId);
-      // });
+      dispatch(setCurKnowledgeContent(HTMLFromBlocks));
+      // 防抖更新后端
+      debouncedAsyncContentChange(HTMLFromBlocks);
     } catch (error) {
-      console.log(error);
+      console.log("Error getting HTML from blocks:", error);
     }
+  }
+
+  function asyncContentChange(HTMLFromBlocks: string) {
+    updateKnowledgeContentById(`${selectedKnowledgeId}`, {
+      content: HTMLFromBlocks,
+    })
+      .then(() => {
+        console.log("更新后台内容成功", selectedKnowledgeId, HTMLFromBlocks);
+        dispatch(setCurKnowledgeSyncStatus(true));
+        setProgress(100);
+        clearProgressTimer();
+      })
+      .catch((error) => {
+        console.log("更新后台内容失败", error);
+        dispatch(setCurKnowledgeSyncStatus(false));
+        clearProgressTimer();
+      });
   }
 
   // 监听标题变化
@@ -101,7 +167,8 @@ const Note = () => {
   // 监听面包屑目录变化
   const handleBreadcrumbClick = (pathPart: any) => {
     console.log("点击面包屑目录", pathPart);
-    dispatch(setSelectedId(pathPart.id));
+    // dispatch(setSelectedId(pathPart.id));
+    setKnowledgeId(pathPart.id);
   };
 
   return (
@@ -144,6 +211,36 @@ const Note = () => {
               </Fragment>
             )
           )}
+          {/* 新增同步状态标识 */}
+          <Flex
+            align="center"
+            gap="small"
+            style={{
+              marginLeft: "10px",
+            }}
+          >
+            <ConfigProvider
+              theme={{
+                components: {
+                  Progress: {
+                    /* 这里是你的组件 token */
+                    circleIconFontSize: "1.2em",
+                  },
+                },
+              }}
+            >
+              <Progress
+                type="dashboard"
+                trailColor="#e6f4ff"
+                percent={progress}
+                gapDegree={0}
+                // strokeWidth={20}
+                strokeWidth={8}
+                size={22}
+              />
+              <span>{progress === 100 ? "已自动同步" : `同步中`}</span>
+            </ConfigProvider>
+          </Flex>
         </Box>
       </Box>
       <Box mt={20}>
@@ -164,6 +261,7 @@ const Note = () => {
           <BlockNoteView
             editor={editor}
             formattingToolbar={false}
+            // onChange={debounce(contentChangeHandler, 2000)}
             onChange={contentChangeHandler}
           >
             <FormattingToolbarController

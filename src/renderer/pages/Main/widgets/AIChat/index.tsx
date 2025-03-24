@@ -1,6 +1,7 @@
 import {
   Attachments,
   Bubble,
+  BubbleProps,
   Conversations,
   Prompts,
   Sender,
@@ -14,6 +15,7 @@ import React, { useEffect } from "react";
 import {
   CloudUploadOutlined,
   CommentOutlined,
+  CopyOutlined,
   EllipsisOutlined,
   FireOutlined,
   HeartOutlined,
@@ -22,8 +24,20 @@ import {
   ReadOutlined,
   ShareAltOutlined,
   SmileOutlined,
+  SyncOutlined,
 } from "@ant-design/icons";
-import { Badge, Button, type GetProp, Space } from "antd";
+import { Badge, Button, type GetProp, Space, theme, Typography } from "antd";
+import { streamChat } from "@/service/api/chat";
+import markdownit from "markdown-it";
+
+const md = markdownit({ html: true, breaks: true });
+
+const renderMarkdown: BubbleProps["messageRender"] = (content) => (
+  <Typography>
+    {/* biome-ignore lint/security/noDangerouslySetInnerHtml: used in demo */}
+    <div dangerouslySetInnerHTML={{ __html: md.render(content) }} />
+  </Typography>
+);
 
 const renderTitle = (icon: React.ReactElement, title: string) => (
   <Space align="start">
@@ -219,8 +233,35 @@ const Independent: React.FC = () => {
 
   // ==================== Runtime ====================
   const [agent] = useXAgent({
-    request: async ({ message }, { onSuccess }) => {
-      onSuccess(`Mock success return. You said: ${message}`);
+    request: async ({ message }, { onSuccess, onUpdate }) => {
+      if (!message) return;
+      let curMsg = "";
+      try {
+        // 调用 streamChat 方法，获取 EventSource
+        const eventSource = await streamChat({ question: message });
+
+        // 监听消息事件
+        eventSource.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data); // 解析流式数据
+            console.log("收到消息:", data);
+            curMsg += data.message;
+            onUpdate(curMsg); // 调用 onUpdate 更新消息
+          } catch (error) {
+            console.error("解析消息失败:", error);
+          }
+        };
+
+        // 监听错误事件
+        eventSource.onerror = (error) => {
+          console.error("流式响应错误或者结束:", error);
+          eventSource.close(); // 关闭连接
+          onSuccess(curMsg); // 通知 agent 流式响应已结束
+        };
+      } catch (error) {
+        console.error("请求失败:", error);
+        onSuccess("请求失败"); // 通知 agent 请求失败
+      }
     },
   });
 
@@ -295,13 +336,31 @@ const Independent: React.FC = () => {
       />
     </Space>
   );
+  const { token } = theme.useToken();
+  const footer = (
+    <Space size={token.paddingXXS}>
+      <Button
+        color="default"
+        variant="text"
+        size="small"
+        icon={<SyncOutlined />}
+      />
+      <Button
+        color="default"
+        variant="text"
+        size="small"
+        icon={<CopyOutlined />}
+      />
+    </Space>
+  );
 
   const items: GetProp<typeof Bubble.List, "items"> = messages.map(
     ({ id, message, status }) => ({
       key: id,
-      loading: status === "loading",
+      // loading: status === "loading",
       role: status === "local" ? "local" : "ai",
       content: message,
+      messageRender: renderMarkdown,
     })
   );
 

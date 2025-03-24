@@ -15,6 +15,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { CopyOutlined, DeleteOutlined, EditOutlined } from "@ant-design/icons";
 import { getParentId } from "../Note/utils";
+import { useSetKnowledgeId } from "@/renderer/hooks/useSetKnowledgeId";
 // 写死的三个目录，每个目录有三层的树形数据
 const defaultData: TreeDataNode[] = [];
 
@@ -26,6 +27,7 @@ const DirTree: React.FC = () => {
   const selectedKey = useSelector((state: any) => state.knowledge.selectedId);
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const setKnowledgeId = useSetKnowledgeId();
 
   useEffect(() => {
     dispatch(fetchAndUpdateTreeData() as any);
@@ -90,7 +92,8 @@ const DirTree: React.FC = () => {
     if (keys.length === 0) return;
     navigate(`/knowledge`);
     console.log("select", keys, info);
-    dispatch(setSelectedId(keys[0]));
+    // dispatch(setSelectedId(keys[0]));
+    setKnowledgeId(keys[0] as string);
   };
 
   // 自定义渲染Tree节点，添加右键菜单组件
@@ -111,7 +114,8 @@ const DirTree: React.FC = () => {
             console.log("添加子节点成功", res);
             // 更新目录和知识内容
             dispatch(fetchAndUpdateTreeData() as any);
-            dispatch(setSelectedId(res.id));
+            // dispatch(setSelectedId(res.id));
+            setKnowledgeId(res.id);
             // 展开节点
             setExpandedKeys([...expandedKeys, nodeData.key]);
             console.log("展开节点", expandedKeys);
@@ -153,7 +157,8 @@ const DirTree: React.FC = () => {
           deleteNode(keyToDelete).then((res) => {
             console.log("删除节点成功", res);
             dispatch(fetchAndUpdateTreeData() as any);
-            dispatch(setSelectedId(parentNode.id));
+            // dispatch(setSelectedId(parentNode.id));
+            setKnowledgeId(parentNode.id);
           });
         },
       },

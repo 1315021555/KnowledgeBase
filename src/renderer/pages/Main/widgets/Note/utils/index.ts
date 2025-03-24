@@ -5,7 +5,6 @@
  * @returns {Array} - 拼接后的路径
  */
 export function findPath(tree: any[], id: number) {
-  console.log("findPath", tree, id);
   // 递归遍历树
   function traverse(node: any, nodePath: string[]): string[] {
     if (node.id === id) {

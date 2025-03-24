@@ -14,7 +14,13 @@ export const fetchAndUpdateTreeData = createAsyncThunk(
 const knowledgeSlice = createSlice({
   name: "knowledge",
   initialState: {
+    /** 当前选中的知识节点 ID */
     selectedId: null,
+    /** 当前知识节点内容 */
+    currentKnowledgeContent: "",
+    /** 当前知识同步状态 */
+    currentKnowledgeSyncStatus: true,
+    /** 知识目录结构 */
     treeData: [],
   },
   reducers: {
@@ -25,6 +31,14 @@ const knowledgeSlice = createSlice({
     setTreeData: (state, action) => {
       console.log("set treedata", action.payload);
       state.treeData = action.payload;
+    },
+    setCurKnowledgeContent: (state, action) => {
+      console.log("setCurKnowledge", action.payload);
+      state.currentKnowledgeContent = action.payload;
+    },
+    setCurKnowledgeSyncStatus: (state, action) => {
+      console.log("setCurKnowledgeSyncStatus", action.payload);
+      state.currentKnowledgeSyncStatus = action.payload;
     },
   },
   extraReducers: (builder) => {
@@ -43,5 +57,10 @@ const knowledgeSlice = createSlice({
   },
 });
 
-export const { setSelectedId, setTreeData } = knowledgeSlice.actions;
+export const {
+  setSelectedId,
+  setTreeData,
+  setCurKnowledgeContent,
+  setCurKnowledgeSyncStatus,
+} = knowledgeSlice.actions;
 export default knowledgeSlice.reducer;
