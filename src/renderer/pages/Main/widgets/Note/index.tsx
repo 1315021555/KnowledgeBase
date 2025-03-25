@@ -27,6 +27,7 @@ import {
   fetchAndUpdateTreeData,
   setCurKnowledgeContent,
   setCurKnowledgeSyncStatus,
+  setCurrentPageIsEdit,
 } from "@/renderer/redux/knowledgeSlice";
 import { findPath } from "./utils";
 import { debounce } from "@/common/utils";
@@ -47,6 +48,7 @@ const Note = () => {
   const treedata = useSelector((state: any) => state.knowledge.treeData);
   const dispatch = useDispatch();
   const setKnowledgeId = useSetKnowledgeId();
+  const prevSelectedKnowledgeId = useRef<string | null>(null);
 
   // 组件卸载时清除定时器
   useEffect(() => {
@@ -95,24 +97,15 @@ const Note = () => {
   // 1. 页面切换 2. 编辑当前页面内容
   async function contentChangeHandler() {
     try {
+      dispatch(setCurrentPageIsEdit(true));
       setProgress(0);
-      // 清楚之前的定时器，要用函数调用的方式
+      // 清除之前的定时器，要用函数调用的方式
       clearProgressTimer();
-      // timer.current = setInterval(() => {
-      //   if (progress < 100) {
-      //     console.log("progress", progress);
-      //     setProgress((prevProgress) => prevProgress + 10);
-      //   } else {
-      //     clearProgressTimer();
-      //     setProgress(100);
-      //   }
-      // }, 200);
       // 启动新定时器
       timer.current = setInterval(() => {
         setProgress((prev) => (prev < 90 ? prev + 10 : prev)); // 更新进度
       }, 200);
 
-      // TODO: 如何判断是页面切换，如果是页面切换就不用更新后端
       dispatch(setCurKnowledgeSyncStatus(false));
       const MarkdownFromBlocks = await editor.blocksToMarkdownLossy();
       if (MarkdownFromBlocks === null) {
@@ -122,6 +115,13 @@ const Note = () => {
 
       console.log("change markdown", MarkdownFromBlocks);
       dispatch(setCurKnowledgeContent(MarkdownFromBlocks));
+      // 如果是页面切换，跳过更新后端
+      if (prevSelectedKnowledgeId.current !== selectedKnowledgeId) {
+        console.log("页面切换，跳过更新后端");
+        prevSelectedKnowledgeId.current = selectedKnowledgeId;
+        dispatch(setCurrentPageIsEdit(false));
+        return;
+      }
       // 防抖更新后端
       debouncedAsyncContentChange(MarkdownFromBlocks);
     } catch (error) {
@@ -154,7 +154,6 @@ const Note = () => {
   async function tilteChangeHandler(e: React.ChangeEvent<HTMLInputElement>) {
     try {
       const title = e.target.value;
-      // if (!isLogin) return;
       setTitle(title);
       updateKnowledgeContentById(`${selectedKnowledgeId}`, {
         title: title,

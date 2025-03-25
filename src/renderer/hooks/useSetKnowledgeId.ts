@@ -1,6 +1,7 @@
 import { useDispatch, useSelector } from "react-redux";
 import {
   setCurKnowledgeSyncStatus,
+  setCurrentPageIsEdit,
   setSelectedId,
 } from "../redux/knowledgeSlice";
 import { updateKnowledgeContentById } from "@/service/api/knowledage";
@@ -10,11 +11,18 @@ export function useSetKnowledgeId() {
   const currentContent = useSelector(
     (state: any) => state.knowledge.currentKnowledgeContent
   );
+  const currentPageIsEdit = useSelector(
+    (state: any) => state.knowledge.currentPageIsEdit
+  );
 
   const commitAndDispatch = async (newSelectedId: string) => {
     console.log("commitAndDispatch", selectedId, newSelectedId);
     // 检查是否有未提交的更改
-    if (selectedId !== newSelectedId && selectedId !== null) {
+    if (
+      selectedId !== newSelectedId &&
+      selectedId !== null &&
+      currentPageIsEdit
+    ) {
       try {
         // 提交更新
         await updateKnowledgeContentById(selectedId, {
@@ -29,6 +37,7 @@ export function useSetKnowledgeId() {
     }
 
     // 执行 dispatch(setSelectedId);
+    dispatch(setCurrentPageIsEdit(false));
     dispatch(setSelectedId(newSelectedId));
   };
 

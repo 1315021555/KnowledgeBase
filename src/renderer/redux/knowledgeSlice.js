@@ -20,6 +20,8 @@ const knowledgeSlice = createSlice({
     currentKnowledgeContent: "",
     /** 当前知识同步状态 */
     currentKnowledgeSyncStatus: true,
+    /** 当前页面是否被编辑过 */
+    currentPageIsEdit: false,
     /** 知识目录结构 */
     treeData: [],
   },
@@ -39,6 +41,10 @@ const knowledgeSlice = createSlice({
     setCurKnowledgeSyncStatus: (state, action) => {
       console.log("setCurKnowledgeSyncStatus", action.payload);
       state.currentKnowledgeSyncStatus = action.payload;
+    },
+    setCurrentPageIsEdit: (state, action) => {
+      console.log("setCurrentPageIsEdit", action.payload);
+      state.currentPageIsEdit = action.payload;
     },
   },
   extraReducers: (builder) => {
@@ -62,5 +68,6 @@ export const {
   setTreeData,
   setCurKnowledgeContent,
   setCurKnowledgeSyncStatus,
+  setCurrentPageIsEdit,
 } = knowledgeSlice.actions;
 export default knowledgeSlice.reducer;
