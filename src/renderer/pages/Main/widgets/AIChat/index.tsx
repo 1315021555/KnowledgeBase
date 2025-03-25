@@ -27,7 +27,7 @@ import {
   SyncOutlined,
 } from "@ant-design/icons";
 import { Badge, Button, type GetProp, Space, theme, Typography } from "antd";
-import { streamChat } from "@/service/api/chat";
+import { streamChat, streamRagChat } from "@/service/api/chat";
 import markdownit from "markdown-it";
 
 const md = markdownit({ html: true, breaks: true });
@@ -238,7 +238,7 @@ const Independent: React.FC = () => {
       let curMsg = "";
       try {
         // 调用 streamChat 方法，获取 EventSource
-        const eventSource = await streamChat({ question: message });
+        const eventSource = await streamRagChat({ question: message });
 
         // 监听消息事件
         eventSource.onmessage = (event) => {
