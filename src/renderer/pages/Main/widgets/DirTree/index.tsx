@@ -14,7 +14,7 @@ import {
 } from "@/renderer/redux/knowledgeSlice";
 import { useNavigate } from "react-router-dom";
 import { CopyOutlined, DeleteOutlined, EditOutlined } from "@ant-design/icons";
-import { getParentId } from "../Note/utils";
+import { getParentId } from "../Editor/utils";
 import { useSetKnowledgeId } from "@/renderer/hooks/useSetKnowledgeId";
 // 写死的三个目录，每个目录有三层的树形数据
 const defaultData: TreeDataNode[] = [];

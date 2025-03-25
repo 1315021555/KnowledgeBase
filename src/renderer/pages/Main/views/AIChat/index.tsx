@@ -210,7 +210,7 @@ const roles: GetProp<typeof Bubble.List, "roles"> = {
   },
 };
 
-const Independent: React.FC = () => {
+const IndependentChat: React.FC = () => {
   // ==================== Style ====================
   const { styles } = useStyle();
 
@@ -464,4 +464,4 @@ const Independent: React.FC = () => {
   );
 };
 
-export default Independent;
+export default IndependentChat;

@@ -29,6 +29,7 @@ export function ExpendButton() {
   // }, editor)
 
   return (
+    // eslint-disable-next-line
     <Components.FormattingToolbar.Button
       mainTooltip={"扩写选中文本"}
       onClick={() => {

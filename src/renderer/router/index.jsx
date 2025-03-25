@@ -1,8 +1,8 @@
 import { createBrowserRouter } from "react-router-dom";
 import Main from "../pages/Main";
-import AIChat from "../pages/Main/widgets/AIChat";
-import Home from "../pages/Main/widgets/Home";
-import Note from "../pages/Main/widgets/Note";
+import AIChat from "../pages/Main/views/AIChat";
+import Home from "../pages/Main/views/Home";
+import KnowledgePage from "../pages/Main/views/KnowledgePage";
 
 const router = createBrowserRouter([
   {
@@ -20,7 +20,7 @@ const router = createBrowserRouter([
       },
       {
         path: "/knowledge",
-        element: <Note />,
+        element: <KnowledgePage />,
       },
     ],
   },

@@ -34,7 +34,7 @@ import { debounce } from "@/common/utils";
 import { useCallback } from "react";
 import { useSetKnowledgeId } from "@/renderer/hooks/useSetKnowledgeId";
 import { ConfigProvider, Flex, Progress } from "antd";
-const Note = () => {
+const Editor = () => {
   const selectedKnowledgeId = useSelector(
     (state: any) => state.knowledge.selectedId
   );
@@ -182,10 +182,9 @@ const Note = () => {
         justifyContent="space-between"
         p={4}
         bg="white"
-        // 高度
         w={"100%"}
-        h={20}
-        pos={"fixed"}
+        // h={10}
+        position={"sticky"}
         top={0}
         zIndex={1000}
       >
@@ -246,7 +245,7 @@ const Note = () => {
           </Flex>
         </Box>
       </Box>
-      <Box mt={20}>
+      <Box mt={0}>
         {/* 标题 */}
         <Box ml={50}>
           <Input
@@ -329,4 +328,4 @@ const Note = () => {
   );
 };
 
-export default Note;
+export default Editor;
