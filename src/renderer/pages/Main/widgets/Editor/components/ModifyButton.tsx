@@ -1,3 +1,4 @@
+import { setSelectedText } from "@/renderer/redux/chatSlice";
 import {
   useBlockNoteEditor,
   useComponentsContext,
@@ -11,7 +12,7 @@ import { useDispatch } from "react-redux";
 // Custom Formatting Toolbar Button to toggle blue text & background color.
 export function ModifyButton() {
   const editor = useBlockNoteEditor();
-  const Components = useComponentsContext();
+  const Components = useComponentsContext()!;
   const dispatch = useDispatch();
 
   // Tracks whether the text & background are both blue.
@@ -32,13 +33,9 @@ export function ModifyButton() {
     <Components.FormattingToolbar.Button
       mainTooltip={"改写选中文本"}
       onClick={() => {
-        const slectedText = editor.getSelectedText();
-        console.log("selectedText", slectedText);
-        // dispatch(setSelectedText({ text: '改写: ' + slectedText }))
-        // editor.toggleStyles({
-        //   textColor: 'blue',
-        //   backgroundColor: 'blue',
-        // })
+        const selectedText = editor.getSelectedText();
+        console.log("selectedText", selectedText);
+        dispatch(setSelectedText("改写: " + selectedText));
       }}
       // isSelected={isSelected}
     >

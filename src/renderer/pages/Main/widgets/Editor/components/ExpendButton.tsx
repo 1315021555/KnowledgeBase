@@ -15,20 +15,6 @@ export function ExpendButton() {
   const Components = useComponentsContext()!;
   const dispatch = useDispatch();
 
-  // Tracks whether the text & background are both blue.
-  // const [isSelected, setIsSelected] = useState(
-  //   editor.getActiveStyles().textColor === 'blue' &&
-  //     editor.getActiveStyles().backgroundColor === 'blue',
-  // )
-
-  // // Updates state on content or selection change.
-  // useEditorContentOrSelectionChange(() => {
-  //   setIsSelected(
-  //     editor.getActiveStyles().textColor === 'blue' &&
-  //       editor.getActiveStyles().backgroundColor === 'blue',
-  //   )
-  // }, editor)
-
   return (
     // eslint-disable-next-line
     <Components.FormattingToolbar.Button

@@ -27,7 +27,7 @@ import {
   SyncOutlined,
 } from "@ant-design/icons";
 import { Badge, Button, type GetProp, Space, theme, Typography } from "antd";
-import { streamChat, streamRagChat } from "@/service/api/chat";
+import { streamKnowledgeChat, streamRagChat } from "@/service/api/chat";
 import markdownit from "markdown-it";
 
 const md = markdownit({ html: true, breaks: true });
