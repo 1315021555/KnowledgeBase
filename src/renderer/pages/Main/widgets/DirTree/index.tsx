@@ -98,6 +98,8 @@ const DirTree: React.FC = () => {
 
   // 自定义渲染Tree节点，添加右键菜单组件
   const titleRender = (nodeData: any) => {
+    const isRoot = nodeData.key == "1"; // 判断是否为根目录
+
     const menuItems = [
       {
         label: "新建页面",
@@ -131,20 +133,10 @@ const DirTree: React.FC = () => {
           console.log("Duplicate", nodeData);
         },
       },
-      // {
-      //   label: "重命名",
-      //   key: "3",
-      //   icon: <EditOutlined />,
-      //   onClick: () => {
-      //     // setModalTitle("重命名");
-      //     // setActiveNode(nodeData);
-      //     // setModalValue(nodeData.title);
+    ];
 
-      //     console.log("Rename", nodeData);
-      //     // onOpen();
-      //   },
-      // },
-      {
+    if (!isRoot) {
+      menuItems.push({
         label: "删除",
         key: "4",
         icon: <DeleteOutlined />,
@@ -161,8 +153,8 @@ const DirTree: React.FC = () => {
             setKnowledgeId(parentNode.id);
           });
         },
-      },
-    ];
+      });
+    }
 
     return (
       <Dropdown

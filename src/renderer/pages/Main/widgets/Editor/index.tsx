@@ -34,10 +34,13 @@ import { debounce } from "@/common/utils";
 import { useCallback } from "react";
 import { useSetKnowledgeId } from "@/renderer/hooks/useSetKnowledgeId";
 import { ConfigProvider, Flex, Progress } from "antd";
+import { EmitObjFromChat, EmitType } from "@/renderer/redux/editorSlice";
 const Editor = () => {
+  const dispatch = useDispatch();
   const selectedKnowledgeId = useSelector(
     (state: any) => state.knowledge.selectedId
   );
+
   const editor = useCreateBlockNote();
   const [title, setTitle] = useState<string>("defaultTitle");
   const currentKnowledgeSyncStatus = useSelector(
@@ -46,7 +49,7 @@ const Editor = () => {
   const [progress, setProgress] = useState(0);
   const timer = useRef<NodeJS.Timeout | null>(null);
   const treedata = useSelector((state: any) => state.knowledge.treeData);
-  const dispatch = useDispatch();
+
   const setKnowledgeId = useSetKnowledgeId();
   const prevSelectedKnowledgeId = useRef<string | null>(null);
 
@@ -57,6 +60,40 @@ const Editor = () => {
     };
   }, []);
 
+  // 编辑器操作块
+  const emitObjFromChat: EmitObjFromChat = useSelector(
+    (state: any) => state.editor.emitObjFromChat
+  );
+  useEffect(() => {
+    const selection = editor.getSelection();
+    if (!selection) {
+      // 插入到最后
+      const lastBlock = editor.document[editor.document.length - 1]; // 获取最后一个块
+      if (emitObjFromChat.type === EmitType.INSERT) {
+        editor.insertBlocks(
+          [{ type: "paragraph", content: emitObjFromChat.content }],
+          lastBlock,
+          "after"
+        );
+      }
+
+      return;
+    }
+    const selectedBlocks = selection.blocks;
+    if (emitObjFromChat.type === EmitType.INSERT) {
+      editor.insertBlocks(
+        [{ type: "paragraph", content: emitObjFromChat.content }],
+        selectedBlocks[selectedBlocks.length - 1],
+        "after"
+      );
+    }
+    if (emitObjFromChat.type === EmitType.REPLACE) {
+      editor.updateBlock(selectedBlocks[selectedBlocks.length - 1], {
+        type: "paragraph",
+        content: emitObjFromChat.content,
+      });
+    }
+  }, [emitObjFromChat]);
   useEffect(() => {
     // 切换页面内容
     if (!selectedKnowledgeId) {

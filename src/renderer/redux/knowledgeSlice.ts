@@ -15,7 +15,7 @@ const knowledgeSlice = createSlice({
   name: "knowledge",
   initialState: {
     /** 当前选中的知识节点 ID */
-    selectedId: null,
+    selectedId: "1",
     /** 当前知识节点内容 */
     currentKnowledgeContent: "",
     /** 当前知识同步状态 */
@@ -23,7 +23,7 @@ const knowledgeSlice = createSlice({
     /** 当前页面是否被编辑过 */
     currentPageIsEdit: false,
     /** 知识目录结构 */
-    treeData: [],
+    treeData: [] as any[],
   },
   reducers: {
     setSelectedId: (state, action) => {
