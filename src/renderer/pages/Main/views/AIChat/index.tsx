@@ -3,6 +3,7 @@ import {
   Bubble,
   BubbleProps,
   Conversations,
+  ConversationsProps,
   Prompts,
   Sender,
   Welcome,
@@ -10,12 +11,14 @@ import {
   useXChat,
 } from "@ant-design/x";
 import { createStyles } from "antd-style";
-import React, { useEffect } from "react";
+import React, { useCallback, useEffect } from "react";
 
 import {
   CloudUploadOutlined,
   CommentOutlined,
   CopyOutlined,
+  DeleteOutlined,
+  EditOutlined,
   EllipsisOutlined,
   FireOutlined,
   HeartOutlined,
@@ -26,9 +29,32 @@ import {
   SmileOutlined,
   SyncOutlined,
 } from "@ant-design/icons";
-import { Badge, Button, type GetProp, Space, theme, Typography } from "antd";
-import { streamKnowledgeChat, streamRagChat } from "@/service/api/chat";
+import {
+  Badge,
+  Button,
+  type GetProp,
+  Input,
+  message,
+  Modal,
+  Space,
+  theme,
+  Typography,
+} from "antd";
+import {
+  createChatSession,
+  deleteChatSession,
+  getChatHistoryBySessionId,
+  getSessionList,
+  sessionChat,
+  streamKnowledgeChat,
+  streamRagChat,
+  updateChatSession,
+} from "@/service/api/chat";
 import markdownit from "markdown-it";
+import {
+  ChatHistoryMessage,
+  formatMessage,
+} from "@/renderer/utils/formatMessage";
 
 const md = markdownit({ html: true, breaks: true });
 
@@ -197,7 +223,7 @@ const senderPromptsItems: GetProp<typeof Prompts, "items"> = [
 const roles: GetProp<typeof Bubble.List, "roles"> = {
   ai: {
     placement: "start",
-    typing: { step: 5, interval: 20 },
+    // typing: { step: 5, interval: 20 },
     styles: {
       content: {
         borderRadius: 16,
@@ -215,6 +241,7 @@ const IndependentChat: React.FC = () => {
   const { styles } = useStyle();
 
   // ==================== State ====================
+
   const [headerOpen, setHeaderOpen] = React.useState(false);
 
   const [content, setContent] = React.useState("");
@@ -227,18 +254,148 @@ const IndependentChat: React.FC = () => {
     defaultConversationsItems[0].key
   );
 
+  const activeKeyRef = React.useRef(activeKey);
+
   const [attachedFiles, setAttachedFiles] = React.useState<
     GetProp<typeof Attachments, "items">
   >([]);
 
+  // 重命名
+  const [renameModalVisible, setRenameModalVisible] = React.useState(false);
+  const [editingConversation, setEditingConversation] = React.useState<{
+    key: string;
+    label: string;
+  } | null>(null);
+  const [newConversationName, setNewConversationName] = React.useState("");
+
+  // 补全rename逻辑
+  const handleRename = async () => {
+    console.log(editingConversation, newConversationName);
+    if (!editingConversation || !newConversationName.trim()) {
+      message.warning("请输入有效的会话名称");
+      return;
+    }
+
+    try {
+      const updateRes = await updateChatSession(+editingConversation.key, {
+        name: newConversationName.trim(),
+      });
+
+      if (updateRes) {
+        setConversationsItems(
+          conversationsItems.map((item) =>
+            item.key === editingConversation.key
+              ? { ...item, label: newConversationName.trim() }
+              : item
+          )
+        );
+        message.success("会话重命名成功");
+        setRenameModalVisible(false);
+      }
+    } catch (error) {
+      console.error("重命名失败:", error);
+      message.error("重命名失败");
+    }
+  };
+
+  const menuConfig: ConversationsProps["menu"] = (conversation) => ({
+    items: [
+      {
+        label: "重命名",
+        key: "rename",
+        icon: <EditOutlined />,
+      },
+      {
+        label: "删除",
+        key: "delete",
+        icon: <DeleteOutlined />,
+        danger: true,
+      },
+    ],
+    onClick: async (menuInfo) => {
+      console.log(menuInfo);
+      const conversationKey = conversation?.key;
+      switch (menuInfo.key) {
+        case "rename":
+          // 补全rename逻辑
+          setEditingConversation(conversation as any); // 记录当前会话信息，用于更新NAM
+          setNewConversationName((conversation?.label || "") as any);
+          setRenameModalVisible(true); // 弹窗编辑
+          break;
+        case "delete":
+          const deleteRes = (await deleteChatSession(+conversationKey)) as any;
+          console.log("删除会话", deleteRes);
+          if (deleteRes?.affected > 0) {
+            setConversationsItems(
+              conversationsItems.filter((item) => item.key !== conversationKey)
+            );
+            setActiveKey("0");
+          }
+          break;
+      }
+    },
+  });
+
+  useEffect(() => {
+    // 获取会话列表
+    const fetchSessionList = async () => {
+      try {
+        const res = await getSessionList();
+        console.log("会话列表", res);
+        if (Array.isArray(res) && res.length > 0) {
+          setConversationsItems(
+            res.map((item) => ({ key: item.id, label: item.name }))
+          );
+        }
+      } catch (error) {
+        console.error("获取会话列表失败:", error);
+      }
+    };
+    fetchSessionList();
+  }, []);
+
+  useEffect(() => {
+    activeKeyRef.current = activeKey;
+    console.log("activeKeyRef.current", activeKeyRef.current);
+    // 聊天记录更新
+    const fetchChatHistory = async () => {
+      const sessionHistory: ChatHistoryMessage[] =
+        await getChatHistoryBySessionId(+activeKey);
+      const messages = formatMessage(sessionHistory);
+      if (messages.length > 0) {
+        setMessages(messages); // 更新消息状态，触发重新渲染 Bubble
+      }
+      if (activeKey === "0") {
+        setMessages([]); // 清空消息状态，触发重新渲染 Bubble
+      }
+      console.log("fetchChatHistory", sessionHistory, messages, activeKey);
+    };
+    fetchChatHistory();
+  }, [activeKey]);
+
   // ==================== Runtime ====================
-  const [agent] = useXAgent({
-    request: async ({ message }, { onSuccess, onUpdate }) => {
+  const requestHandler = useCallback(
+    async (
+      { message }: { message: string },
+      {
+        onSuccess,
+        onUpdate,
+      }: {
+        onSuccess: (message: string) => void;
+        onUpdate: (message: string) => void;
+      }
+    ) => {
       if (!message) return;
       let curMsg = "";
       try {
+        console.log("开始请求", activeKeyRef.current);
         // 调用 streamChat 方法，获取 EventSource
-        const eventSource = await streamRagChat({ question: message });
+        const eventSource = await sessionChat({
+          question: message,
+          // TODO：暂时写1
+          sessionId: +activeKeyRef.current,
+          isRag: false,
+        });
 
         // 监听消息事件
         eventSource.onmessage = (event) => {
@@ -263,21 +420,27 @@ const IndependentChat: React.FC = () => {
         onSuccess("请求失败"); // 通知 agent 请求失败
       }
     },
+    [activeKey] // 依赖 activeKey
+  );
+
+  const [agent] = useXAgent({
+    request: requestHandler as any,
   });
 
   const { onRequest, messages, setMessages } = useXChat({
     agent,
   });
 
-  useEffect(() => {
-    if (activeKey !== undefined) {
-      setMessages([]);
-    }
-  }, [activeKey]);
-
   // ==================== Event ====================
-  const onSubmit = (nextContent: string) => {
+  const onSubmit = async (nextContent: string) => {
     if (!nextContent) return;
+    // 如果是新的会话，添加会话
+    if (activeKey === "0") {
+      // TODO: 这里可以根据问题生成会话名称
+      const newSession: any = await addConversation(nextContent);
+      console.log("newSession", newSession);
+      setActiveKey(`${newSession.id}`);
+    }
     onRequest(nextContent);
     setContent("");
   };
@@ -286,15 +449,38 @@ const IndependentChat: React.FC = () => {
     onRequest(info.data.description as string);
   };
 
-  const onAddConversation = () => {
+  const onAddConversation = async () => {
+    setActiveKey("0");
+    setMessages([]);
+    // const newSession: any = await createChatSession({ name: "新的会话" });
+    // console.log("newSession", newSession);
+    // const key = newSession.id;
+    // setConversationsItems([
+    //   ...conversationsItems,
+    //   {
+    //     key: `${key}`,
+    //     label: `New Conversation ${conversationsItems.length}`,
+    //   },
+    // ]);
+    // setActiveKey(`${key}`);
+  };
+
+  const addConversation = async (name: string) => {
+    const newSession: any = await createChatSession({ name });
+    console.log("newSession", newSession);
+    const key = newSession.id;
+    // 添加列表
     setConversationsItems([
-      ...conversationsItems,
       {
-        key: `${conversationsItems.length}`,
-        label: `New Conversation ${conversationsItems.length}`,
+        key: `${key}`,
+        label: name,
       },
+      ...conversationsItems,
     ]);
-    setActiveKey(`${conversationsItems.length}`);
+    // 切换会话
+    setActiveKey(`${key}`);
+    activeKeyRef.current = `${key}`;
+    return newSession;
   };
 
   const onConversationClick: GetProp<typeof Conversations, "onActiveChange"> = (
@@ -337,6 +523,7 @@ const IndependentChat: React.FC = () => {
     </Space>
   );
   const { token } = theme.useToken();
+
   const footer = (
     <Space size={token.paddingXXS}>
       <Button
@@ -413,9 +600,28 @@ const IndependentChat: React.FC = () => {
     </div>
   );
 
+  const RenameModel = (
+    <Modal
+      title="重命名会话"
+      open={renameModalVisible}
+      onOk={handleRename}
+      onCancel={() => setRenameModalVisible(false)}
+      okText="确认"
+      cancelText="取消"
+    >
+      <Input
+        value={newConversationName}
+        onChange={(e) => setNewConversationName(e.target.value)}
+        placeholder="请输入新的会话名称"
+        onPressEnter={handleRename}
+      />
+    </Modal>
+  );
+
   // ==================== Render =================
   return (
     <div className={styles.layout}>
+      {RenameModel}
       <div className={styles.menu}>
         {/* 🌟 Logo */}
         {logoNode}
@@ -431,6 +637,7 @@ const IndependentChat: React.FC = () => {
         {/* 🌟 会话管理 */}
         <Conversations
           items={conversationsItems}
+          menu={menuConfig}
           className={styles.conversations}
           activeKey={activeKey}
           onActiveChange={onConversationClick}

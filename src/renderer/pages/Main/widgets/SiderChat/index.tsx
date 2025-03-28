@@ -34,6 +34,7 @@ import {
 } from "@/service/api/chat";
 import markdownit from "markdown-it";
 import { DefaultMessageInfo, MessageInfo } from "@ant-design/x/es/use-x-chat";
+import { formatMessage } from "@/renderer/utils/formatMessage";
 
 const defaultMessages: DefaultMessageInfo<string>[] = [
   {
@@ -123,20 +124,7 @@ const App: React.FC = () => {
   const [isLoadingHistory, setIsLoadingHistory] = React.useState(false);
   const [chatHistory, setChatHistory] = React.useState<any[]>([]);
   const chatHistoryMessages: MessageInfo<string>[] | null = useMemo(() => {
-    const res = [];
-    for (let i = 0; i < chatHistory.length; i++) {
-      const item = chatHistory[i];
-      res.push({
-        // id: item.id,
-        message: item.question,
-        status: "local",
-      } as MessageInfo<string>);
-      res.push({
-        // id: item.id,
-        message: item.answer,
-        status: "success",
-      } as MessageInfo<string>);
-    }
+    const res = formatMessage(chatHistory);
     if (res.length > 0) {
       // 清空message
       messages.splice(0, messages.length);
