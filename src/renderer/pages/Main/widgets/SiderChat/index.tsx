@@ -48,7 +48,7 @@ const roles: GetProp<typeof Bubble.List, "roles"> = {
   ai: {
     placement: "start",
     avatar: { icon: <UserOutlined />, style: { background: "#fde3cf" } },
-    typing: { step: 5, interval: 20 },
+    // typing: { step: 5, interval: 20 },
     style: {
       maxWidth: 600,
     },
@@ -78,7 +78,7 @@ const App: React.FC = () => {
         setLoading(true);
         const eventSource = await streamKnowledgeChat({
           question: message,
-          knowledgeId: selectedKnowledgeId,
+          knowledgeId: selectedKnowledgeIdRef.current,
         });
         // 监听消息事件
         eventSource.onmessage = (event) => {
@@ -121,6 +121,12 @@ const App: React.FC = () => {
   const selectedKnowledgeId = useSelector(
     (state: any) => state.knowledge.selectedId
   );
+  // 用于在handler中获取selectedKnowledgeId的值，防止闭包问题
+  const selectedKnowledgeIdRef = React.useRef(selectedKnowledgeId);
+  useEffect(() => {
+    selectedKnowledgeIdRef.current = selectedKnowledgeId;
+  }, [selectedKnowledgeId]);
+
   const [isLoadingHistory, setIsLoadingHistory] = React.useState(false);
   const [chatHistory, setChatHistory] = React.useState<any[]>([]);
   const chatHistoryMessages: MessageInfo<string>[] | null = useMemo(() => {
