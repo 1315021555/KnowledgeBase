@@ -29,6 +29,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { EmitType, setEmitObjFromChat } from "@/renderer/redux/editorSlice";
 import { Tooltip } from "antd"; // 引入 Tooltip 组件
 import {
+  clearChatHistoryByKnowledgeId,
   getChatHistoryByKnowledgeId,
   streamKnowledgeChat,
 } from "@/service/api/chat";
@@ -110,7 +111,7 @@ const App: React.FC = () => {
   });
 
   // 数据管理
-  const { onRequest, messages } = useXChat({
+  const { onRequest, messages, setMessages } = useXChat({
     agent,
     defaultMessages: defaultMessages,
     requestPlaceholder: "请输入您的问题",
@@ -142,6 +143,7 @@ const App: React.FC = () => {
     console.log("历史记录", res);
     return res;
   }, [chatHistory]);
+
   useEffect(() => {
     console.log("当前Messages", messages);
     const fetchData = async () => {
@@ -156,6 +158,7 @@ const App: React.FC = () => {
     };
     fetchData();
   }, [selectedKnowledgeId]);
+
   const selectedText = useSelector((state: any) => state.chat.selectedText);
   const dispatch = useDispatch();
   useEffect(() => {
@@ -236,6 +239,30 @@ const App: React.FC = () => {
           <Flex align="center" gap="small">
             <RiAiGenerate2 />
             AI助手
+            <Space />
+            <Button
+              onClick={async () => {
+                const delRes: any = await clearChatHistoryByKnowledgeId(
+                  selectedKnowledgeId
+                );
+                if (delRes.affected > 0) {
+                  setMessages([...defaultMessages] as any);
+                  messageApi.open({
+                    type: "success",
+                    content: "清除成功",
+                    duration: 1,
+                  });
+                } else {
+                  messageApi.open({
+                    type: "error",
+                    content: "清除失败",
+                    duration: 1,
+                  });
+                }
+              }}
+            >
+              清空对话
+            </Button>
           </Flex>
         </Typography.Title>
         <div

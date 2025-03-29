@@ -11,7 +11,7 @@ import {
   useXChat,
 } from "@ant-design/x";
 import { createStyles } from "antd-style";
-import React, { useCallback, useEffect } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 
 import {
   CloudUploadOutlined,
@@ -32,11 +32,15 @@ import {
 import {
   Badge,
   Button,
+  Flex,
   type GetProp,
   Input,
   message,
   Modal,
+  Popover,
+  Select,
   Space,
+  Switch,
   theme,
   Typography,
 } from "antd";
@@ -55,15 +59,13 @@ import {
   ChatHistoryMessage,
   formatMessage,
 } from "@/renderer/utils/formatMessage";
+import { useDispatch } from "react-redux";
+import { getKnowledgeContentById } from "@/service/api/knowledage";
+import { MarkdownRenderer } from "@/renderer/components/MarkDownRenderer";
 
-const md = markdownit({ html: true, breaks: true });
-
-const renderMarkdown: BubbleProps["messageRender"] = (content) => (
-  <Typography>
-    {/* biome-ignore lint/security/noDangerouslySetInnerHtml: used in demo */}
-    <div dangerouslySetInnerHTML={{ __html: md.render(content) }} />
-  </Typography>
-);
+const renderMarkdown: BubbleProps["messageRender"] = (content) => {
+  return <MarkdownRenderer content={content} />;
+};
 
 const renderTitle = (icon: React.ReactElement, title: string) => (
   <Space align="start">
@@ -237,6 +239,7 @@ const roles: GetProp<typeof Bubble.List, "roles"> = {
 };
 
 const IndependentChat: React.FC = () => {
+  const dispatch = useDispatch();
   // ==================== Style ====================
   const { styles } = useStyle();
 
@@ -267,6 +270,24 @@ const IndependentChat: React.FC = () => {
     label: string;
   } | null>(null);
   const [newConversationName, setNewConversationName] = React.useState("");
+
+  // RAG开关
+  const [enableRag, setEnableRag] = React.useState(false);
+  const RagRef = React.useRef(false);
+  // 多模型选择
+  // 定义模型列表
+  const modelOptions = [
+    { label: "DeepSeek R1", value: "deepseek-r1:7b" },
+    { label: "Llama3", value: "llama3:8b" },
+    { label: "Mistral", value: "mistral:7b" },
+  ];
+  const [selectedModel, setSelectedModel] = React.useState(
+    modelOptions[0].value
+  );
+
+  useEffect(() => {
+    RagRef.current = enableRag;
+  }, [enableRag]);
 
   // 补全rename逻辑
   const handleRename = async () => {
@@ -335,6 +356,8 @@ const IndependentChat: React.FC = () => {
       }
     },
   });
+  // 存储引用的 id 列表
+  const [references, setReferences] = useState<string[]>([]);
 
   useEffect(() => {
     // 获取会话列表
@@ -392,14 +415,15 @@ const IndependentChat: React.FC = () => {
         // 调用 streamChat 方法，获取 EventSource
         const eventSource = await sessionChat({
           question: message,
-          // TODO：暂时写1
           sessionId: +activeKeyRef.current,
-          isRag: false,
+          isRag: RagRef.current,
         });
 
         // 监听消息事件
         eventSource.onmessage = (event) => {
           try {
+            setIsFinished(false);
+            setIsChatConnect(true);
             const data = JSON.parse(event.data); // 解析流式数据
             console.log("收到消息:", data);
             curMsg += data.message;
@@ -414,13 +438,14 @@ const IndependentChat: React.FC = () => {
           console.error("流式响应错误或者结束:", error);
           eventSource.close(); // 关闭连接
           onSuccess(curMsg); // 通知 agent 流式响应已结束
+          setIsFinished(true);
         };
       } catch (error) {
         console.error("请求失败:", error);
         onSuccess("请求失败"); // 通知 agent 请求失败
       }
     },
-    [activeKey] // 依赖 activeKey
+    [activeKey, enableRag] // 依赖 activeKey
   );
 
   const [agent] = useXAgent({
@@ -434,6 +459,7 @@ const IndependentChat: React.FC = () => {
   // ==================== Event ====================
   const onSubmit = async (nextContent: string) => {
     if (!nextContent) return;
+    setIsChatConnect(false);
     // 如果是新的会话，添加会话
     if (activeKey === "0") {
       // TODO: 这里可以根据问题生成会话名称
@@ -452,17 +478,6 @@ const IndependentChat: React.FC = () => {
   const onAddConversation = async () => {
     setActiveKey("0");
     setMessages([]);
-    // const newSession: any = await createChatSession({ name: "新的会话" });
-    // console.log("newSession", newSession);
-    // const key = newSession.id;
-    // setConversationsItems([
-    //   ...conversationsItems,
-    //   {
-    //     key: `${key}`,
-    //     label: `New Conversation ${conversationsItems.length}`,
-    //   },
-    // ]);
-    // setActiveKey(`${key}`);
   };
 
   const addConversation = async (name: string) => {
@@ -524,30 +539,61 @@ const IndependentChat: React.FC = () => {
   );
   const { token } = theme.useToken();
 
-  const footer = (
-    <Space size={token.paddingXXS}>
-      <Button
-        color="default"
-        variant="text"
-        size="small"
-        icon={<SyncOutlined />}
-      />
-      <Button
-        color="default"
-        variant="text"
-        size="small"
-        icon={<CopyOutlined />}
-      />
-    </Space>
-  );
+  const copyMessage = (resp: string) => {
+    navigator.clipboard.writeText(resp);
+    message.success("复制成功");
+  };
+
+  const [isFinished, setIsFinished] = React.useState(true);
+  const [isChatConnect, setIsChatConnect] = React.useState(false); // 用于控制是否显示加载中的状态，默认不显示
+
+  const showFooter = (id: string, status: string, index: number) => {
+    const isLast = index === messages.length - 1;
+    const isLocal = status === "local";
+    if (isLast) {
+      return isFinished && !isLocal;
+    }
+
+    return !isLocal;
+  };
+
+  // 点击引用时的处理函数
+  const handleReferenceClick = async (id: string) => {
+    // 在这里处理点击引用后的交互逻辑，比如跳转到相关内容
+    console.log(`Clicked on reference with id: ${id}`);
+    const content = await getKnowledgeContentById(id);
+    console.log("content", content);
+  };
 
   const items: GetProp<typeof Bubble.List, "items"> = messages.map(
-    ({ id, message, status }) => ({
+    ({ id, message, status }, index) => ({
       key: id,
-      // loading: status === "loading",
+      loading: status === "loading" && !isChatConnect,
       role: status === "local" ? "local" : "ai",
       content: message,
       messageRender: renderMarkdown,
+      footer: showFooter(id, status, index) && (
+        <Space size={token.paddingXXS}>
+          <Button
+            color="default"
+            variant="text"
+            size="small"
+            icon={<SyncOutlined />}
+            onClick={() => {
+              const lastUserMessage = messages[messages.length - 2];
+              console.log("lastUserMessage", lastUserMessage);
+              onRequest(lastUserMessage.message);
+            }}
+          />
+          <Button
+            color="default"
+            variant="text"
+            size="small"
+            icon={<CopyOutlined />}
+            onClick={() => copyMessage(message)}
+          />
+        </Space>
+      ),
     })
   );
 
@@ -666,6 +712,25 @@ const IndependentChat: React.FC = () => {
           loading={agent.isRequesting()}
           className={styles.sender}
         />
+        {/* 功能选项 */}
+        <Flex align="center" gap="middle">
+          <Space style={{ marginBottom: 6 }}>
+            <Switch
+              checked={enableRag}
+              onChange={setEnableRag}
+              checkedChildren="基于知识库"
+              unCheckedChildren="基于知识库"
+            />
+          </Space>
+          <Space style={{ marginBottom: 6 }}>
+            <Select
+              value={selectedModel}
+              options={modelOptions}
+              onChange={setSelectedModel}
+              style={{ width: 150 }}
+            />
+          </Space>
+        </Flex>
       </div>
     </div>
   );

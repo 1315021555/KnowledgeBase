@@ -35,3 +35,8 @@ export const addChildNode = (
 export const deleteNode = (id: string): Promise<any> => {
   return http.delete(`/knowledge/node/${id}`);
 };
+
+// 移动节点
+export const moveNode = (id: string, parentId: string): Promise<any> => {
+  return http.put(`/knowledge/node/${id}/move/${parentId}`);
+};

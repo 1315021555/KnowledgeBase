@@ -53,9 +53,17 @@ export const sessionChat = async (params: SessionChatParams) => {
   );
 };
 
+// ————————KnowledegChat相关——————————
+
 export const getChatHistoryByKnowledgeId = async (knowledgeId: number) => {
   return http.get(`/chat/history/knowledge/${knowledgeId}`);
 };
+
+export const clearChatHistoryByKnowledgeId = async (knowledgeId: number) => {
+  return http.delete(`/chat/history/knowledge/${knowledgeId}`);
+};
+
+// ————————Session相关——————————
 
 export const getSessionList = async () => {
   return http.get("/chat/sessionList");

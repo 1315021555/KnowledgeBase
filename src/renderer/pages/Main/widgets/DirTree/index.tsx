@@ -4,8 +4,15 @@ import {
   deleteNode,
   getDirTree,
   getKnowledgeContentById,
+  moveNode,
 } from "@/service/api/knowledage";
-import { Dropdown, Tree, type TreeDataNode, type TreeProps } from "antd";
+import {
+  Dropdown,
+  Tree,
+  type TreeDataNode,
+  type TreeProps,
+  message,
+} from "antd";
 import { useDispatch, useSelector } from "react-redux";
 import {
   fetchAndUpdateTreeData,
@@ -16,13 +23,10 @@ import { useNavigate } from "react-router-dom";
 import { CopyOutlined, DeleteOutlined, EditOutlined } from "@ant-design/icons";
 import { getParentId } from "../Editor/utils";
 import { useSetKnowledgeId } from "@/renderer/hooks/useSetKnowledgeId";
-// 写死的三个目录，每个目录有三层的树形数据
-const defaultData: TreeDataNode[] = [];
 
 const DirTree: React.FC = () => {
-  // const [treeData, setTreeData] = useState<TreeDataNode[]>(defaultData);
-  // 展开的节点：根节点，添加子节点之后的节点
   const [expandedKeys, setExpandedKeys] = useState(["1"]);
+  const [loading, setLoading] = useState(false);
   const treeData = useSelector((state: any) => state.knowledge.treeData);
   const selectedKey = useSelector((state: any) => state.knowledge.selectedId);
   const dispatch = useDispatch();
@@ -33,95 +37,61 @@ const DirTree: React.FC = () => {
     dispatch(fetchAndUpdateTreeData() as any);
   }, []);
 
+
   const onDragEnter: TreeProps["onDragEnter"] = (info) => {
-    console.log(info);
+    // Optional: Add visual feedback during drag
+    console.log("Drag enter:", info);
   };
 
-  const onDrop: TreeProps["onDrop"] = (info) => {
-    console.log(info);
-    const dropKey = info.node.key;
-    const dragKey = info.dragNode.key;
-    const dropPos = info.node.pos.split("-");
-    const dropPosition =
-      info.dropPosition - Number(dropPos[dropPos.length - 1]);
+  const onDrop: TreeProps["onDrop"] = async (info) => {
+    setLoading(true);
+    try {
+      const { dragNode, node, dropPosition, dropToGap } = info;
 
-    const loop = (
-      data: TreeDataNode[],
-      key: React.Key,
-      callback: (node: TreeDataNode, i: number, data: TreeDataNode[]) => void
-    ) => {
-      for (let i = 0; i < data.length; i++) {
-        if (data[i].key === key) {
-          return callback(data[i], i, data);
-        }
-        if (data[i].children) {
-          loop(data[i].children!, key, callback);
-        }
-      }
-    };
-    const data = [...treeData];
+      const moveRes = await moveNode(
+        dragNode.key as string,
+        node.key as string
+      );
+      console.log("moveRes", moveRes);
 
-    let dragObj: TreeDataNode;
-    loop(data, dragKey, (item, index, arr) => {
-      arr.splice(index, 1);
-      dragObj = item;
-    });
+      // Refresh the tree data from server
+      await dispatch(fetchAndUpdateTreeData() as any);
 
-    if (!info.dropToGap) {
-      loop(data, dropKey, (item) => {
-        item.children = item.children || [];
-        item.children.unshift(dragObj);
-      });
-    } else {
-      let ar: TreeDataNode[] = [];
-      let i: number;
-      loop(data, dropKey, (_item, index, arr) => {
-        ar = arr;
-        i = index;
-      });
-      if (dropPosition === -1) {
-        ar.splice(i!, 0, dragObj!);
-      } else {
-        ar.splice(i! + 1, 0, dragObj!);
-      }
+      message.success("位置更新成功");
+    } catch (error) {
+      console.error("拖拽失败:", error);
+      message.error("拖拽失败");
+    } finally {
+      setLoading(false);
     }
-    setTreeData(data);
   };
 
   const onSelect: TreeProps["onSelect"] = (keys, info) => {
     if (keys.length === 0) return;
     navigate(`/knowledge`);
-    console.log("select", keys, info);
-    // dispatch(setSelectedId(keys[0]));
     setKnowledgeId(keys[0] as string);
   };
 
-  // 自定义渲染Tree节点，添加右键菜单组件
   const titleRender = (nodeData: any) => {
-    const isRoot = nodeData.key == "1"; // 判断是否为根目录
+    const isRoot = nodeData.key == "1";
 
     const menuItems = [
       {
         label: "新建页面",
         key: "1",
         icon: <CopyOutlined />,
-        onClick: () => {
-          console.log("新建页面", nodeData);
-          // 给选中节点添加子节点
-          const newNodeData = {
-            title: "New Page",
-            content: "",
-          };
-          addChildNode(nodeData.key, newNodeData).then((res) => {
-            console.log("添加子节点成功", res);
-            // 更新目录和知识内容
-            dispatch(fetchAndUpdateTreeData() as any);
-            // dispatch(setSelectedId(res.id));
-            setKnowledgeId(res.id);
-            // 展开节点
+        onClick: async () => {
+          try {
+            const newNodeData = {
+              title: "New Page",
+              content: "",
+            };
+            await addChildNode(nodeData.key, newNodeData);
+            await dispatch(fetchAndUpdateTreeData() as any);
             setExpandedKeys([...expandedKeys, nodeData.key]);
-            console.log("展开节点", expandedKeys);
-          });
+          } catch (error) {
+            message.error("创建页面失败");
+          }
         },
       },
       {
@@ -129,7 +99,6 @@ const DirTree: React.FC = () => {
         key: "2",
         icon: <CopyOutlined />,
         onClick: () => {
-          // setActiveNode(nodeData);
           console.log("Duplicate", nodeData);
         },
       },
@@ -140,18 +109,16 @@ const DirTree: React.FC = () => {
         label: "删除",
         key: "4",
         icon: <DeleteOutlined />,
-        onClick: () => {
-          // setActiveNode(nodeData);
-          console.log("Delete", nodeData);
-          const keyToDelete = nodeData.key;
-          const parentNode = getParentId(treeData, keyToDelete);
-          console.log("父节点", parentNode);
-          deleteNode(keyToDelete).then((res) => {
-            console.log("删除节点成功", res);
-            dispatch(fetchAndUpdateTreeData() as any);
-            // dispatch(setSelectedId(parentNode.id));
+        onClick: async () => {
+          try {
+            const keyToDelete = nodeData.key;
+            const parentNode = getParentId(treeData, keyToDelete);
+            await deleteNode(keyToDelete);
+            await dispatch(fetchAndUpdateTreeData() as any);
             setKnowledgeId(parentNode.id);
-          });
+          } catch (error) {
+            message.error("删除失败");
+          }
         },
       });
     }
@@ -163,17 +130,18 @@ const DirTree: React.FC = () => {
         }}
         trigger={["contextMenu"]}
       >
-        <div>
+        <div className="tree-node-content">
           <div>{nodeData.title}</div>
         </div>
       </Dropdown>
     );
   };
 
-  const tree = treeData?.length ? (
+  return (
     <Tree
       className="draggable-tree"
-      defaultExpandedKeys={expandedKeys}
+      expandedKeys={expandedKeys}
+      onExpand={(keys) => setExpandedKeys(keys as string[])}
       defaultExpandAll
       autoExpandParent
       blockNode
@@ -187,10 +155,7 @@ const DirTree: React.FC = () => {
       titleRender={titleRender}
       selectedKeys={[selectedKey]}
     />
-  ) : (
-    "加载目录中"
   );
-  return <>{tree}</>;
 };
 
 export default DirTree;

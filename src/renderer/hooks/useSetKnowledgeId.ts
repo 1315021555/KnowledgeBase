@@ -5,6 +5,7 @@ import {
   setSelectedId,
 } from "../redux/knowledgeSlice";
 import { updateKnowledgeContentById } from "@/service/api/knowledage";
+import { setActiveNavItemIndex } from "../redux/siderBar";
 export function useSetKnowledgeId() {
   const dispatch = useDispatch();
   const selectedId = useSelector((state: any) => state.knowledge.selectedId); // 当前选中的 ID
@@ -37,6 +38,7 @@ export function useSetKnowledgeId() {
     }
 
     // 执行 dispatch(setSelectedId);
+    dispatch(setActiveNavItemIndex(-1));
     dispatch(setCurrentPageIsEdit(false));
     dispatch(setSelectedId(newSelectedId));
   };

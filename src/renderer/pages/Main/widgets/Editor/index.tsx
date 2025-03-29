@@ -35,6 +35,7 @@ import { useCallback } from "react";
 import { useSetKnowledgeId } from "@/renderer/hooks/useSetKnowledgeId";
 import { ConfigProvider, Flex, Progress } from "antd";
 import { EmitObjFromChat, EmitType } from "@/renderer/redux/editorSlice";
+import { AskAIButton } from "./components/AskAIButton";
 const Editor = () => {
   const dispatch = useDispatch();
   const selectedKnowledgeId = useSelector(
@@ -309,8 +310,9 @@ const Editor = () => {
                   <BlockTypeSelect key={"blockTypeSelect"} />
 
                   {/* Extra button to toggle blue text & background */}
-                  <ExpendButton key={"customButton"} />
-                  <ModifyButton key={"modifyButton"} />
+                  <AskAIButton key={"askaiButton"} />
+                  {/* <ExpendButton key={"customButton"} />
+                  <ModifyButton key={"modifyButton"} /> */}
                   {/* <ImageCaptionButton key={"imageCaptionButton"} />
             <ReplaceImageButton key={"replaceImageButton"} /> */}
 

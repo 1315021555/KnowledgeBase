@@ -21,10 +21,16 @@ import { FiHome, FiActivity, FiBook, FiSettings } from "react-icons/fi";
 import { RiAiGenerate2 } from "react-icons/ri";
 import { useNavigate } from "react-router-dom";
 import DirTree from "../DirTree";
+import { useDispatch, useSelector } from "react-redux";
+import { setActiveNavItemIndex } from "@/renderer/redux/siderBar";
 
 const SidebarComponent = () => {
-  const [activeNavItem, setActiveNavItem] = useState<number>(0);
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const activeNavItemIndex = useSelector(
+    (state: any) => state.siderBar.activeNavItemIndex
+  );
+  // const [activeNavItemIndex, setactiveNavItemIndex] = useState<number>(0);
   const navItems = [
     { label: "Home", icon: <FiHome />, path: "/" },
     { label: "AI", icon: <RiAiGenerate2 />, path: "/chat" },
@@ -32,7 +38,7 @@ const SidebarComponent = () => {
   ];
 
   const handleNavItemClick = (index: number, path: string) => {
-    setActiveNavItem(index);
+    dispatch(setActiveNavItemIndex(index));
     // 这里可以添加路由跳转逻辑，例如使用 useNavigate 钩子
     navigate(path);
   };
@@ -68,7 +74,7 @@ const SidebarComponent = () => {
           <NavItem
             key={item.label}
             icon={item.icon}
-            isActive={index === activeNavItem}
+            isActive={index === activeNavItemIndex}
             onClick={() => handleNavItemClick(index, item.path)}
           >
             {item.label}
