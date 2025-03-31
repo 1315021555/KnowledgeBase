@@ -100,6 +100,10 @@ const Editor = () => {
     if (!selectedKnowledgeId) {
       return;
     }
+    console.log("访问页面", selectedKnowledgeId);
+    updateKnowledgeContentById(`${selectedKnowledgeId}`, {
+      lastAccessedAt: new Date().toISOString(),
+    });
 
     const fetchContent = async () => {
       const data = await getKnowledgeContentById(`${selectedKnowledgeId}`);

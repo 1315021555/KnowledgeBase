@@ -1,121 +1,144 @@
-import React from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { Box, Text, HStack } from "@chakra-ui/react";
+import { Card, Input, List } from "antd";
 import {
-  Box,
-  Flex,
-  Text,
-  VStack,
-  HStack,
-  Button,
-  Avatar,
-} from "@chakra-ui/react";
+  getRecentlyAccessedKnowledge,
+  searchKnowledge,
+} from "@/service/api/knowledage";
+import { formatWithWeekday } from "@/renderer/utils/formatDateTime";
+import { useNavigate } from "react-router-dom";
+import { useSetKnowledgeId } from "@/renderer/hooks/useSetKnowledgeId";
+import { AutoComplete } from "antd";
+import debounce from "lodash.debounce";
 
-function App() {
+const MAX_RECENT_ITEMS = 10;
+
+const App = React.memo(function App() {
+  const [recentlyVisited, setRecentlyVisited] = useState<any[]>([]);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+  const setKnowledgeId = useSetKnowledgeId();
+  const [searchValue, setSearchValue] = useState("");
+
+  useEffect(() => {
+    const fetchRecentVisited = async () => {
+      try {
+        const res = await getRecentlyAccessedKnowledge();
+        setRecentlyVisited(res || []);
+      } catch (error) {
+        console.error("获取最近访问失败：", error);
+      }
+    };
+    fetchRecentVisited();
+  }, []);
+
+  // 添加防抖函数
+  const debouncedSearch = useMemo(() => {
+    const search = async (value: string) => {
+      if (!value) {
+        setSearchResults([]);
+        return;
+      }
+      setLoading(true);
+      try {
+        const res = await searchKnowledge(value);
+        setSearchResults(
+          res?.length
+            ? res
+            : [
+                {
+                  title: "无匹配结果",
+                  id: "no-results",
+                },
+              ]
+        );
+      } catch (error) {
+        setSearchResults([
+          {
+            title: "搜索服务不可用",
+            id: "service-error",
+          },
+        ]);
+        console.error("搜索失败：", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    return debounce(search, 300);
+  }, []);
+
+  const handleSearchChange = (value: string) => {
+    setSearchValue(value);
+    debouncedSearch(value);
+  };
+
   return (
     <Box p={8} bg="white" minH="100vh">
-      {/* 顶部问候语 */}
-      <Text fontSize="2xl" fontWeight="bold" mb={8}>
+      <Text fontSize="2xl" fontWeight="bold" mb={4}>
         Good evening, ZhiChao Lin
       </Text>
 
-      {/* 横向排列的 Recently visited */}
-      <Box mb={8}>
-        <Text fontSize="lg" fontWeight="semibold" mb={4}>
-          Recently visited
-        </Text>
-        <HStack spacing={4}>
-          <VisitedItem title="weq" time="1h ago" />
-          <VisitedItem title="report" time="1d ago" />
-          <VisitedItem title="Tasks" time="1d ago" />
-          <VisitedItem title="test" time="1d ago" />
-          <VisitedItem title="复盘记录" time="May 14, 2024" />
-        </HStack>
-        <Button mt={4} colorScheme="blue" size="sm">
-          New page
-        </Button>
-      </Box>
+      {/* 搜索框 */}
+      {/* 替换原来的Search组件 */}
+      <AutoComplete
+        dropdownStyle={{ marginTop: 16 }}
+        value={searchValue}
+        options={searchResults.map((item) => ({
+          value: item.title,
+          label: item.title,
+          id: item.id,
+          disabled: item.id === "no-results" || item.id === "service-error", // 禁用无效选项
+        }))}
+        onChange={handleSearchChange}
+        onSelect={(value, option) => {
+          // 如果是无效选项，不执行导航
+          if (option.id === "no-results" || option.id === "service-error") {
+            return;
+          }
+          setKnowledgeId(option.id);
+          navigate(`/knowledge`);
+        }}
+        placeholder="搜索知识库..."
+        style={{ width: 400, marginBottom: 16 }}
+      >
+        <Input.Search enterButton="搜索" size="large" loading={loading} />
+      </AutoComplete>
 
-      {/* 横向排列的 Upcoming events */}
-      <Box>
-        <Text fontSize="lg" fontWeight="semibold" mb={4}>
-          Upcoming events
-        </Text>
-        <HStack spacing={4}>
-          <EventItem
-            title="My first meeting"
-            time="9 AM - Office"
-            date="Mar 17"
-            action="Join meeting"
-          />
-          <EventItem
-            title="Lunch"
-            time="1 PM - Restaurant"
-            date="Tue"
-            action="See your upcoming events"
-          />
-          <EventItem
-            title="Grocery shopping"
-            time="11 AM - Store"
-            date="Mar 18"
-            action="Connect Notion Calendar"
-          />
-          <EventItem
-            title="Birthday celebration"
-            time="All day"
-            date="Mar 19"
-            action=""
-          />
-        </HStack>
-      </Box>
+      <Text fontSize="lg" fontWeight="semibold" m={4}>
+        Recently visited{" "}
+        {recentlyVisited.length > MAX_RECENT_ITEMS &&
+          `(显示最新 ${MAX_RECENT_ITEMS} 条)`}
+      </Text>
+      <List
+        grid={{
+          gutter: 16,
+          xs: 1,
+          sm: 2,
+          md: 4,
+          lg: 4,
+          xl: 4,
+          xxl: 3,
+        }}
+        dataSource={recentlyVisited}
+        renderItem={(item) => (
+          <List.Item>
+            <Card
+              title={item.title}
+              // 可点击
+              style={{ cursor: "pointer" }}
+              onClick={() => {
+                setKnowledgeId(item.id);
+                navigate(`/knowledge`);
+              }}
+            >
+              {formatWithWeekday(item.lastAccessedAt)}
+            </Card>
+          </List.Item>
+        )}
+      />
     </Box>
   );
-}
-
-// 最近访问的项目组件
-function VisitedItem({ title, time }: any) {
-  return (
-    <Box
-      p={4}
-      borderWidth="1px"
-      borderRadius="lg"
-      bg="gray.50"
-      minW="150px"
-      textAlign="center"
-    >
-      <Text fontWeight="medium">{title}</Text>
-      <Text fontSize="sm" color="gray.500">
-        {time}
-      </Text>
-    </Box>
-  );
-}
-
-// 即将到来的事件组件
-function EventItem({ title, time, date, action }: any) {
-  return (
-    <Box
-      p={4}
-      borderWidth="1px"
-      borderRadius="lg"
-      bg="gray.50"
-      minW="200px"
-      textAlign="center"
-    >
-      <Text fontSize="lg" fontWeight="bold">
-        {date}
-      </Text>
-      <Text fontWeight="medium" mt={2}>
-        {title}
-      </Text>
-      <Text fontSize="sm" color="gray.500">
-        {time}
-      </Text>
-      {action && (
-        <Button mt={2} size="sm" colorScheme="blue">
-          {action}
-        </Button>
-      )}
-    </Box>
-  );
-}
+});
 
 export default App;

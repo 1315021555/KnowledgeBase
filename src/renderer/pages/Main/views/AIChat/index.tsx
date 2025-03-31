@@ -572,7 +572,7 @@ const IndependentChat: React.FC = () => {
       role: status === "local" ? "local" : "ai",
       content: message,
       messageRender: renderMarkdown,
-      footer: showFooter(id, status, index) && (
+      footer: showFooter(id as any, status, index) && (
         <Space size={token.paddingXXS}>
           <Button
             color="default"
