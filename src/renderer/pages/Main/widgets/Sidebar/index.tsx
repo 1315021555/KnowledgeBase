@@ -34,7 +34,7 @@ const SidebarComponent = () => {
   const navItems = [
     { label: "Home", icon: <FiHome />, path: "/" },
     { label: "AI", icon: <RiAiGenerate2 />, path: "/chat" },
-    { label: "设置", icon: <FiSettings />, path: "/" }, // 假设的路径，根据实际情况修改
+    { label: "设置", icon: <FiSettings />, path: "/setting" }, // 假设的路径，根据实际情况修改
   ];
 
   const handleNavItemClick = (index: number, path: string) => {

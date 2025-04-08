@@ -21,7 +21,7 @@ const CustomSplitter: React.FC<Readonly<SplitterProps>> = ({
 
 const KnowledgePage: React.FC = () => (
   <Flex gap="middle" vertical>
-    <CustomSplitter style={{ height: "98vh" }} />
+    <CustomSplitter style={{ height: "96vh" }} />
   </Flex>
 );
 

@@ -15,14 +15,19 @@ export function useSetKnowledgeId() {
   const currentPageIsEdit = useSelector(
     (state: any) => state.knowledge.currentPageIsEdit
   );
+  const curKnowledgeSyncStatus = useSelector(
+    (state: any) => state.knowledge.currentKnowledgeSyncStatus
+  );
 
   const commitAndDispatch = async (newSelectedId: string) => {
     console.log("commitAndDispatch", selectedId, newSelectedId);
     // 检查是否有未提交的更改
+    console.log("正在切换页面", currentPageIsEdit, curKnowledgeSyncStatus);
     if (
       selectedId !== newSelectedId &&
       selectedId !== null &&
-      currentPageIsEdit
+      currentPageIsEdit &&
+      !curKnowledgeSyncStatus
     ) {
       try {
         // 提交更新

@@ -42,7 +42,38 @@ const Editor = () => {
     (state: any) => state.knowledge.selectedId
   );
 
-  const editor = useCreateBlockNote();
+  // Uploads a file to tmpfiles.org and returns the URL to the uploaded file.
+  async function uploadFile(file: File) {
+    // const body = new FormData();
+    // body.append("file", file);
+
+    // const ret = await fetch("https://tmpfiles.org/api/v1/upload", {
+    //   method: "POST",
+    //   body: body,
+    // });
+    // return (await ret.json()).data.url.replace(
+    //   "tmpfiles.org/",
+    //   "tmpfiles.org/dl/"
+    // );
+    const body = new FormData();
+    body.append("file", file);
+
+    const response = await fetch("http://localhost:3000/upload", {
+      method: "POST",
+      body: body,
+    });
+
+    if (!response.ok) {
+      throw new Error("文件上传失败");
+    }
+
+    const data = await response.json();
+    return data.url; // 返回后端提供的文件访问 URL
+  }
+
+  const editor = useCreateBlockNote({
+    uploadFile,
+  });
   const [title, setTitle] = useState<string>("defaultTitle");
   const currentKnowledgeSyncStatus = useSelector(
     (state: any) => state.knowledge.currentKnowledgeSyncStatus
@@ -139,6 +170,13 @@ const Editor = () => {
   // 1. 页面切换 2. 编辑当前页面内容
   async function contentChangeHandler() {
     try {
+      // 如果是页面切换，跳过更新后端
+      if (prevSelectedKnowledgeId.current !== selectedKnowledgeId) {
+        console.log("页面切换，跳过更新后端");
+        prevSelectedKnowledgeId.current = selectedKnowledgeId;
+        dispatch(setCurrentPageIsEdit(false));
+        return;
+      }
       dispatch(setCurrentPageIsEdit(true));
       setProgress(0);
       // 清除之前的定时器，要用函数调用的方式
@@ -157,13 +195,7 @@ const Editor = () => {
 
       console.log("change markdown", MarkdownFromBlocks);
       dispatch(setCurKnowledgeContent(MarkdownFromBlocks));
-      // 如果是页面切换，跳过更新后端
-      if (prevSelectedKnowledgeId.current !== selectedKnowledgeId) {
-        console.log("页面切换，跳过更新后端");
-        prevSelectedKnowledgeId.current = selectedKnowledgeId;
-        dispatch(setCurrentPageIsEdit(false));
-        return;
-      }
+
       // 防抖更新后端
       debouncedAsyncContentChange(MarkdownFromBlocks);
     } catch (error) {

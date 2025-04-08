@@ -62,6 +62,7 @@ import {
 import { useDispatch } from "react-redux";
 import { getKnowledgeContentById } from "@/service/api/knowledage";
 import { MarkdownRenderer } from "@/renderer/components/MarkDownRenderer";
+import { AppConfig, useAppConfig } from "@/renderer/hooks/useAppConfig";
 
 const renderMarkdown: BubbleProps["messageRender"] = (content) => {
   return <MarkdownRenderer content={content} />;
@@ -272,7 +273,13 @@ const IndependentChat: React.FC = () => {
   const [newConversationName, setNewConversationName] = React.useState("");
 
   // RAG开关
-  const [enableRag, setEnableRag] = React.useState(false);
+  // 默认采用本地配置
+  const { useKnowledgeBase }: AppConfig = useAppConfig();
+  useEffect(() => {
+    console.log("useKnowledgeBase", useKnowledgeBase);
+    setEnableRag(useKnowledgeBase);
+  }, [useKnowledgeBase]);
+  const [enableRag, setEnableRag] = React.useState(useKnowledgeBase);
   const RagRef = React.useRef(false);
   // 多模型选择
   // 定义模型列表

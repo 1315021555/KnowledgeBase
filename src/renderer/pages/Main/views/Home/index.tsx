@@ -74,7 +74,7 @@ const App = React.memo(function App() {
   };
 
   return (
-    <Box p={8} bg="white" minH="100vh">
+    <Box p={8} bg="white">
       <Text fontSize="2xl" fontWeight="bold" mb={4}>
         Good evening, ZhiChao Lin
       </Text>
